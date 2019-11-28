@@ -2,4 +2,5 @@
 <resources>
     <dimen name="txt_size">20sp</dimen>
     <dimen name="txt_padding">16dp</dimen>
+    <dimen name="loader_dim">42dp</dimen>
 </resources>
