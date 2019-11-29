@@ -8,8 +8,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.model.LatLng;
 
@@ -18,24 +21,39 @@ import org.vnuk.nanodegreeapp.utils.PersonNetworkUtils;
 
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements PersonAdapter.ItemClickListener {
     private static final LatLng BGD = new LatLng(44.81791, 20.45683);
     private static final int NUM_PERSONS = 17;
-    private TextView tvPerson;
+
+    private PersonAdapter personsAdapter;
+    private RecyclerView personsRecyclerView;
+
     private TextView tvError;
     private ProgressBar pbLoader;
+
+    private Toast infoToast;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        tvPerson = findViewById(R.id.tv_person_data);
+
+        personsRecyclerView = findViewById(R.id.rv_persons);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this,RecyclerView.VERTICAL,false);
+        personsRecyclerView.setLayoutManager(layoutManager);
+        personsRecyclerView.setHasFixedSize(true);
+
+        personsAdapter = new PersonAdapter(this);
+        personsRecyclerView.setAdapter(personsAdapter);
+
         pbLoader = findViewById(R.id.pb_loader);
         tvError = findViewById(R.id.tv_error_message);
         loadPersonData();
     }
 
     private void loadPersonData() {
+        tvError.setVisibility(View.INVISIBLE);
+        personsRecyclerView.setVisibility(View.VISIBLE);
         String query = String.valueOf(NUM_PERSONS);
         new FetchPersonTask().execute(query);
     }
@@ -52,12 +70,21 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         if (id == R.id.action_refresh) {
-            tvPerson.setText("");
+            personsAdapter.setPersonsData(null);
             loadPersonData();
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onItemClick(String message) {
+        if (infoToast!=null)
+            infoToast.cancel();
+
+        infoToast = Toast.makeText(this,message,Toast.LENGTH_LONG);
+        infoToast.show();
     }
 
     public class FetchPersonTask extends AsyncTask<String, Void, String[]> {
@@ -83,10 +110,8 @@ public class MainActivity extends AppCompatActivity {
                 String jsonPersonResponse = PersonNetworkUtils
                         .getResponseFromHttpUrl(personRequestUrl);
 
-                String[] simplePersonData = PersonJsonUtils
+                return PersonJsonUtils
                         .getSimplePersonStringsFromJson(MainActivity.this, jsonPersonResponse);
-
-                return simplePersonData;
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -101,14 +126,11 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String[] personData) {
-
             if (personData != null) {
-                for (String personString : personData) {
-                    tvPerson.append((personString) + "\n\n\n");
-                }
+                personsRecyclerView.setVisibility(View.VISIBLE);
+                personsAdapter.setPersonsData(personData);
             } else {
                 tvError.setVisibility(View.VISIBLE);
-
             }
             pbLoader.setVisibility(View.INVISIBLE);
         }
