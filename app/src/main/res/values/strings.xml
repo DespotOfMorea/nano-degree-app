@@ -2,4 +2,6 @@
     <string name="app_name">NanoDegree App</string>
     <string name="refresh">Refresh</string>
     <string name="error_message">An error has occurred. Please try again by clicking REFRESH</string>
+    <string name="title_activity_person_details">Person Details</string>
+    <string name="details_share">Share Person Details</string>
 </resources>

@@ -1,5 +1,6 @@
 package org.vnuk.nanodegreeapp;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
@@ -8,7 +9,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -30,8 +30,6 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
 
     private TextView tvError;
     private ProgressBar pbLoader;
-
-    private Toast infoToast;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.main, menu);
+        inflater.inflate(R.menu.main_menu, menu);
         return true;
     }
 
@@ -80,11 +78,10 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
 
     @Override
     public void onItemClick(String message) {
-        if (infoToast!=null)
-            infoToast.cancel();
+        Intent detailsIntent = new Intent(this,PersonDetailsActivity.class);
+        detailsIntent.putExtra(Intent.EXTRA_TEXT,message);
 
-        infoToast = Toast.makeText(this,message,Toast.LENGTH_LONG);
-        infoToast.show();
+        startActivity(detailsIntent);
     }
 
     public class FetchPersonTask extends AsyncTask<String, Void, String[]> {
