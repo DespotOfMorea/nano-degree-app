@@ -1,7 +1,6 @@
 package org.vnuk.nanodegreeapp;
 
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -11,6 +10,9 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.AsyncTaskLoader;
+import androidx.loader.content.Loader;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -21,12 +23,14 @@ import org.vnuk.nanodegreeapp.utils.PersonNetworkUtils;
 
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity implements PersonAdapter.ItemClickListener {
+public class MainActivity extends AppCompatActivity implements PersonAdapter.ItemClickListener, LoaderManager.LoaderCallbacks<String[]> {
     private static final LatLng BGD = new LatLng(44.81791, 20.45683);
     private static final int NUM_PERSONS = 17;
 
     private PersonAdapter personsAdapter;
     private RecyclerView personsRecyclerView;
+
+    private static final int PERSON_LOADER_ID = 45;
 
     private TextView tvError;
     private ProgressBar pbLoader;
@@ -46,14 +50,9 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
 
         pbLoader = findViewById(R.id.pb_loader);
         tvError = findViewById(R.id.tv_error_message);
-        loadPersonData();
-    }
 
-    private void loadPersonData() {
-        tvError.setVisibility(View.INVISIBLE);
-        personsRecyclerView.setVisibility(View.VISIBLE);
-        String query = String.valueOf(NUM_PERSONS);
-        new FetchPersonTask().execute(query);
+        LoaderManager.LoaderCallbacks<String[]> callback = MainActivity.this;
+        getSupportLoaderManager().initLoader(PERSON_LOADER_ID, null, callback);
     }
 
     @Override
@@ -68,8 +67,8 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
         int id = item.getItemId();
 
         if (id == R.id.action_refresh) {
-            personsAdapter.setPersonsData(null);
-            loadPersonData();
+            invalidatePersonData();
+            getSupportLoaderManager().restartLoader(PERSON_LOADER_ID, null, this);
             return true;
         }
 
@@ -84,52 +83,67 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
         startActivity(detailsIntent);
     }
 
-    public class FetchPersonTask extends AsyncTask<String, Void, String[]> {
+    @Override
+    public Loader<String[]> onCreateLoader(int id, final Bundle loaderArgs) {
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            pbLoader.setVisibility(View.VISIBLE);
-            if (tvError.getVisibility()==View.VISIBLE)
-                tvError.setVisibility(View.INVISIBLE);
-        }
+        return new AsyncTaskLoader<String[]>(this) {
 
-        @Override
-        protected String[] doInBackground(String... strings) {
-            if (strings.length == 0) {
-                return null;
+            String[] personData = null;
+
+            @Override
+            protected void onStartLoading() {
+                if (personData != null) {
+                    deliverResult(personData);
+                } else {
+                    pbLoader.setVisibility(View.VISIBLE);
+                    if (tvError.getVisibility()==View.VISIBLE)
+                        tvError.setVisibility(View.INVISIBLE);
+                    forceLoad();
+                }
             }
 
-            String location = strings[0];
-            URL personRequestUrl = PersonNetworkUtils.buildUrl(location);
+            @Override
+            public String[] loadInBackground() {
+                String query = String.valueOf(NUM_PERSONS);
+                URL personRequestUrl = PersonNetworkUtils.buildUrl(query);
 
-            try {
-                String jsonPersonResponse = PersonNetworkUtils
-                        .getResponseFromHttpUrl(personRequestUrl);
+                try {
+                    String jsonPersonResponse = PersonNetworkUtils
+                            .getResponseFromHttpUrl(personRequestUrl);
 
-                return PersonJsonUtils
-                        .getSimplePersonStringsFromJson(MainActivity.this, jsonPersonResponse);
+                    return PersonJsonUtils
+                            .getSimplePersonStringsFromJson(MainActivity.this, jsonPersonResponse);
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                return null;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
             }
-        }
 
-        @Override
-        protected void onProgressUpdate(Void... values) {
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected void onPostExecute(String[] personData) {
-            if (personData != null) {
-                personsRecyclerView.setVisibility(View.VISIBLE);
-                personsAdapter.setPersonsData(personData);
-            } else {
-                tvError.setVisibility(View.VISIBLE);
+            public void deliverResult(String[] data) {
+                personData = data;
+                super.deliverResult(data);
             }
-            pbLoader.setVisibility(View.INVISIBLE);
+        };
+    }
+
+    @Override
+    public void onLoadFinished(Loader<String[]> loader, String[] personData) {
+        if (personData != null) {
+            personsRecyclerView.setVisibility(View.VISIBLE);
+            personsAdapter.setPersonsData(personData);
+        } else {
+            tvError.setVisibility(View.VISIBLE);
         }
+        pbLoader.setVisibility(View.INVISIBLE);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<String[]> loader) {
+
+    }
+
+    private void invalidatePersonData() {
+        personsAdapter.setPersonsData(null);
     }
 }
