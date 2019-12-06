@@ -1,16 +1,21 @@
 package org.vnuk.nanodegreeapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ShareCompat;
+import androidx.preference.PreferenceManager;
 
-public class PersonDetailsActivity extends AppCompatActivity {
+import org.vnuk.nanodegreeapp.settings.SettingsActivity;
+
+public class PersonDetailsActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     private TextView tvTitle;
     private TextView tvFirstName;
@@ -33,6 +38,22 @@ public class PersonDetailsActivity extends AppCompatActivity {
                 setValues(message);
             }
         }
+        setupPreferences();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(this);
+    }
+
+    private void setupPreferences() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        String valStr = preferences.getString(getString(R.string.pref_key_details_person),getString(R.string.pref_details_value_1));
+        setDetailsFromPref(valStr);
+
+        preferences.registerOnSharedPreferenceChangeListener(this);
     }
 
     private void setValues(String message) {
@@ -65,6 +86,10 @@ public class PersonDetailsActivity extends AppCompatActivity {
                 startActivity(shareIntent);
             }
             return true;
+        } else if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -82,5 +107,26 @@ public class PersonDetailsActivity extends AppCompatActivity {
                 .setChooserTitle(shareTitle)
                 .setText(detailsText);
         return builder.getIntent();
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(getString(R.string.pref_key_details_person))) {
+            String valStr = sharedPreferences.getString(key,getString(R.string.pref_details_value_1));
+            setDetailsFromPref(valStr);
+        }
+    }
+
+    private void setDetailsFromPref(String valStr) {
+        if (valStr.equals(getString(R.string.pref_details_value_1))) {
+            tvTitle.setVisibility(View.VISIBLE);
+            tvFirstName.setVisibility(View.VISIBLE);
+        } else if (valStr.equals(getString(R.string.pref_details_value_2))) {
+            tvTitle.setVisibility(View.INVISIBLE);
+            tvFirstName.setVisibility(View.VISIBLE);
+        } else if (valStr.equals(getString(R.string.pref_details_value_3))) {
+            tvTitle.setVisibility(View.VISIBLE);
+            tvFirstName.setVisibility(View.INVISIBLE);
+        }
     }
 }

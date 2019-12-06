@@ -1,0 +1,19 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+        <EditTextPreference
+            app:key="@string/pref_key_query_persons"
+            app:icon="@drawable/ic_plus_one_black_24dp"
+            app:title="@string/number_title"
+            app:useSimpleSummaryProvider="true" />
+
+        <ListPreference
+            app:key="@string/pref_key_details_person"
+            app:defaultValue="@string/pref_details_value_1"
+            app:icon="@drawable/ic_person_outline_black_24dp"
+            app:entries="@array/details_entries"
+            app:entryValues="@array/details_values"
+            app:title="@string/details_title"
+            app:useSimpleSummaryProvider="true" />
+
+</PreferenceScreen>

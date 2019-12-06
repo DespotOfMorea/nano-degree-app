@@ -4,4 +4,22 @@
     <string name="error_message">An error has occurred. Please try again by clicking REFRESH</string>
     <string name="title_activity_person_details">Person Details</string>
     <string name="details_share">Share Person Details</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="action_settings">App Settings</string>
+
+    <!-- Messages Preferences -->
+    <string name="number_title">Number of persons to display</string>
+    <string name="details_title">Person details</string>
+
+    <string name="pref_key_query_persons" translatable="false">query_persons</string>
+
+    <string name="pref_key_details_person" translatable="false">details_person</string>
+
+    <string name="pref_details_entry_1">Title First Name Last Name</string>
+    <string name="pref_details_entry_2">First Name Last Name</string>
+    <string name="pref_details_entry_3">Title Last Name</string>
+    <string name="pref_details_value_1" translatable="false">title_first_last</string>
+    <string name="pref_details_value_2" translatable="false">first_last</string>
+    <string name="pref_details_value_3" translatable="false">title_last</string>
+
 </resources>

@@ -1,6 +1,7 @@
 package org.vnuk.nanodegreeapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -13,19 +14,23 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.AsyncTaskLoader;
 import androidx.loader.content.Loader;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.model.LatLng;
 
+import org.vnuk.nanodegreeapp.settings.SettingsActivity;
 import org.vnuk.nanodegreeapp.utils.PersonJsonUtils;
 import org.vnuk.nanodegreeapp.utils.PersonNetworkUtils;
 
 import java.net.URL;
 
-public class MainActivity extends AppCompatActivity implements PersonAdapter.ItemClickListener, LoaderManager.LoaderCallbacks<String[]> {
+public class MainActivity extends AppCompatActivity implements PersonAdapter.ItemClickListener, LoaderManager.LoaderCallbacks<String[]>, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final LatLng BGD = new LatLng(44.81791, 20.45683);
+
     private static final int NUM_PERSONS = 17;
+    private int queryNum;
 
     private PersonAdapter personsAdapter;
     private RecyclerView personsRecyclerView;
@@ -39,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setupPreferences();
 
         personsRecyclerView = findViewById(R.id.rv_persons);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this,RecyclerView.VERTICAL,false);
@@ -53,6 +59,21 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
 
         LoaderManager.LoaderCallbacks<String[]> callback = MainActivity.this;
         getSupportLoaderManager().initLoader(PERSON_LOADER_ID, null, callback);
+    }
+
+    private void setupPreferences() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        String valStr = preferences.getString(getString(R.string.pref_key_query_persons), String.valueOf(NUM_PERSONS));
+        queryNum = Integer.parseInt(valStr);
+
+        preferences.registerOnSharedPreferenceChangeListener(this);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        PreferenceManager.getDefaultSharedPreferences(this).unregisterOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -70,6 +91,10 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
             invalidatePersonData();
             getSupportLoaderManager().restartLoader(PERSON_LOADER_ID, null, this);
             return true;
+        } else if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -81,6 +106,14 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
         detailsIntent.putExtra(Intent.EXTRA_TEXT,message);
 
         startActivity(detailsIntent);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(getString(R.string.pref_key_query_persons))) {
+            String valStr = sharedPreferences.getString(key, String.valueOf(NUM_PERSONS));
+            queryNum = Integer.parseInt(valStr);
+        }
     }
 
     @Override
@@ -104,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
 
             @Override
             public String[] loadInBackground() {
-                String query = String.valueOf(NUM_PERSONS);
+                String query = String.valueOf(queryNum);
                 URL personRequestUrl = PersonNetworkUtils.buildUrl(query);
 
                 try {

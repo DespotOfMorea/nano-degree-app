@@ -1,0 +1,14 @@
+<resources>
+    <!-- Person Details Preference -->
+    <string-array name="details_entries">
+        <item>@string/pref_details_entry_1</item>
+        <item>@string/pref_details_entry_2</item>
+        <item>@string/pref_details_entry_3</item>
+    </string-array>
+
+    <string-array name="details_values">
+        <item>@string/pref_details_value_1</item>
+        <item>@string/pref_details_value_2</item>
+        <item>@string/pref_details_value_3</item>
+    </string-array>
+</resources>
