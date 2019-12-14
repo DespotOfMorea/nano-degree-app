@@ -1,7 +1,10 @@
 package org.vnuk.nanodegreeapp;
 
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -12,7 +15,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.loader.app.LoaderManager;
-import androidx.loader.content.AsyncTaskLoader;
+import androidx.loader.content.CursorLoader;
 import androidx.loader.content.Loader;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -20,20 +23,31 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.gms.maps.model.LatLng;
 
+import org.vnuk.nanodegreeapp.database.PersonContract;
+import org.vnuk.nanodegreeapp.model.FakePerson;
 import org.vnuk.nanodegreeapp.settings.SettingsActivity;
 import org.vnuk.nanodegreeapp.utils.PersonJsonUtils;
-import org.vnuk.nanodegreeapp.utils.PersonNetworkUtils;
 
-import java.net.URL;
-
-public class MainActivity extends AppCompatActivity implements PersonAdapter.ItemClickListener, LoaderManager.LoaderCallbacks<String[]>, SharedPreferences.OnSharedPreferenceChangeListener {
+public class MainActivity extends AppCompatActivity implements PersonAdapter.ItemClickListener, LoaderManager.LoaderCallbacks<Cursor>, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final LatLng BGD = new LatLng(44.81791, 20.45683);
 
     private static final int NUM_PERSONS = 17;
+    private static final String PERSONS_JSON_FILE = "persons.json";
     private int queryNum;
 
     private PersonAdapter personsAdapter;
     private RecyclerView personsRecyclerView;
+    private int position = RecyclerView.NO_POSITION;
+
+    public static final String[] MAIN_PERSON_PROJECTION = {
+            PersonContract.PersonEntry.COLUMN_TITLE,
+            PersonContract.PersonEntry.COLUMN_FIRST_NAME,
+            PersonContract.PersonEntry.COLUMN_LAST_NAME,
+    };
+
+    public static final int INDEX_PERSON_TITLE = 0;
+    public static final int INDEX_PERSON_FIRST_NAME = 1;
+    public static final int INDEX_PERSON_LAST_NAME = 2;
 
     private static final int PERSON_LOADER_ID = 45;
 
@@ -51,14 +65,16 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
         personsRecyclerView.setLayoutManager(layoutManager);
         personsRecyclerView.setHasFixedSize(true);
 
-        personsAdapter = new PersonAdapter(this);
+        personsAdapter = new PersonAdapter(this,this);
         personsRecyclerView.setAdapter(personsAdapter);
 
         pbLoader = findViewById(R.id.pb_loader);
         tvError = findViewById(R.id.tv_error_message);
 
-        LoaderManager.LoaderCallbacks<String[]> callback = MainActivity.this;
+        LoaderManager.LoaderCallbacks<Cursor> callback = MainActivity.this;
         getSupportLoaderManager().initLoader(PERSON_LOADER_ID, null, callback);
+    /* This line should be for generating FakePerson data in Database. */
+        //generateFakePersonData();
     }
 
     private void setupPreferences() {
@@ -101,10 +117,9 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
     }
 
     @Override
-    public void onItemClick(String message) {
+    public void onItemClick(int id) {
         Intent detailsIntent = new Intent(this,PersonDetailsActivity.class);
-        detailsIntent.putExtra(Intent.EXTRA_TEXT,message);
-
+        detailsIntent.putExtra(Intent.EXTRA_TEXT,id);
         startActivity(detailsIntent);
     }
 
@@ -117,54 +132,24 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
     }
 
     @Override
-    public Loader<String[]> onCreateLoader(int id, final Bundle loaderArgs) {
+    public Loader<Cursor> onCreateLoader(int id, final Bundle loaderArgs) {
+        switch (id) {
+            case PERSON_LOADER_ID:
+                Uri personQueryUri = PersonContract.PersonEntry.CONTENT_URI;
+                String sortOrder = null;
+                String selection = null;
 
-        return new AsyncTaskLoader<String[]>(this) {
-
-            String[] personData = null;
-
-            @Override
-            protected void onStartLoading() {
-                if (personData != null) {
-                    deliverResult(personData);
-                } else {
-                    pbLoader.setVisibility(View.VISIBLE);
-                    if (tvError.getVisibility()==View.VISIBLE)
-                        tvError.setVisibility(View.INVISIBLE);
-                    forceLoad();
-                }
-            }
-
-            @Override
-            public String[] loadInBackground() {
-                String query = String.valueOf(queryNum);
-                URL personRequestUrl = PersonNetworkUtils.buildUrl(query);
-
-                try {
-                    String jsonPersonResponse = PersonNetworkUtils
-                            .getResponseFromHttpUrl(personRequestUrl);
-
-                    return PersonJsonUtils
-                            .getSimplePersonStringsFromJson(MainActivity.this, jsonPersonResponse);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    return null;
-                }
-            }
-
-            public void deliverResult(String[] data) {
-                personData = data;
-                super.deliverResult(data);
-            }
-        };
+                return new CursorLoader(this,personQueryUri,MAIN_PERSON_PROJECTION,selection,null,sortOrder);
+                default:
+                    throw new RuntimeException("Loader not implemented: " + id);
+        }
     }
 
     @Override
-    public void onLoadFinished(Loader<String[]> loader, String[] personData) {
+    public void onLoadFinished(Loader<Cursor> loader, Cursor personData) {
         if (personData != null) {
             personsRecyclerView.setVisibility(View.VISIBLE);
-            personsAdapter.setPersonsData(personData);
+            personsAdapter.swapCursor(personData);
         } else {
             tvError.setVisibility(View.VISIBLE);
         }
@@ -172,11 +157,48 @@ public class MainActivity extends AppCompatActivity implements PersonAdapter.Ite
     }
 
     @Override
-    public void onLoaderReset(Loader<String[]> loader) {
-
+    public void onLoaderReset(Loader<Cursor> loader) {
+        personsAdapter.swapCursor(null);
     }
 
     private void invalidatePersonData() {
-        personsAdapter.setPersonsData(null);
+        personsAdapter.swapCursor(null);
+    }
+
+    private void generateFakePersonData() {
+        FakePerson [] personsInArray = new FakePerson[0];
+        try {
+            String jsonPersonResponse = PersonJsonUtils
+                    .loadJSONFromAsset(this,PERSONS_JSON_FILE);
+
+            personsInArray = PersonJsonUtils
+                    .getSimplePersonStringsFromJson(MainActivity.this, jsonPersonResponse);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        if (personsInArray.length!=0) {
+            for (FakePerson fakePerson : personsInArray) {
+                insertFakePersonToDB(fakePerson);
+            }
+        }
+    }
+
+    private void insertFakePersonToDB(FakePerson person) {
+        ContentValues values = new ContentValues();
+        values.put(PersonContract.PersonEntry.COLUMN_TITLE,person.getTitle());
+        values.put(PersonContract.PersonEntry.COLUMN_FIRST_NAME,person.getFirstName());
+        values.put(PersonContract.PersonEntry.COLUMN_LAST_NAME,person.getLastName());
+        values.put(PersonContract.PersonEntry.COLUMN_GENDER,person.getGender());
+        values.put(PersonContract.PersonEntry.COLUMN_AGE,person.getAge());
+        values.put(PersonContract.PersonEntry.COLUMN_STREET,person.getAddress().getStreet());
+        values.put(PersonContract.PersonEntry.COLUMN_CITY,person.getAddress().getCity());
+        values.put(PersonContract.PersonEntry.COLUMN_STATE,person.getAddress().getState());
+        values.put(PersonContract.PersonEntry.COLUMN_POSTCODE,person.getAddress().getPostcode());
+        values.put(PersonContract.PersonEntry.COLUMN_LATITUDE,person.getAddress().getCoordinates().latitude);
+        values.put(PersonContract.PersonEntry.COLUMN_LONGITUDE,person.getAddress().getCoordinates().longitude);
+
+        getContentResolver().insert(PersonContract.PersonEntry.CONTENT_URI, values);
     }
 }

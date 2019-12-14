@@ -4,5 +4,5 @@
     <dimen name="txt_padding">16dp</dimen>
     <dimen name="loader_dim">42dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
-    <dimen name="details_text_margin">0dp</dimen>
+    <dimen name="details_text_margin">16dp</dimen>
 </resources>

@@ -2,20 +2,44 @@ package org.vnuk.nanodegreeapp.utils;
 
 import android.content.Context;
 
+import com.google.android.gms.maps.model.LatLng;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.vnuk.nanodegreeapp.model.FakePerson;
+import org.vnuk.nanodegreeapp.model.PersonAddress;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 
 public class PersonJsonUtils {
 
-    public static String[] getSimplePersonStringsFromJson(Context context, String personJsonStr)
+    public static String loadJSONFromAsset(Context context, String fileName) {
+        String json = null;
+        try {
+            InputStream is = context.getAssets().open(fileName);
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            json = new String(buffer, "UTF-8");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        return json;
+    }
+
+    public static FakePerson[] getSimplePersonStringsFromJson(Context context, String personJsonStr)
             throws JSONException {
 
         final String PERSON_LIST = "results";
 
         final String PERSON_NAME = "name";
         final String PERSON_LOCATION = "location";
+        final String PERSON_STREET = "street";
         final String PERSON_COORDINATES = "coordinates";
         final String PERSON_DOB = "dob";
         final String PERSON_PICTURE = "picture";
@@ -24,7 +48,7 @@ public class PersonJsonUtils {
         final String PERSON_TITLE = "title";
         final String PERSON_FIRST = "first";
         final String PERSON_LAST = "last";
-        final String PERSON_STREET = "street";
+        final String PERSON_NUMBER = "number";
         final String PERSON_CITY = "city";
         final String PERSON_STATE = "state";
         final String PERSON_POSTCODE = "postcode";
@@ -36,7 +60,7 @@ public class PersonJsonUtils {
 
         final String MESSAGE_CODE = "cod";
 
-        String[] parsedPersonData = null;
+        FakePerson[] parsedPersonData = null;
 
         JSONObject personJson = new JSONObject(personJsonStr);
 
@@ -57,7 +81,7 @@ public class PersonJsonUtils {
 
         JSONArray personArray = personJson.getJSONArray(PERSON_LIST);
 
-        parsedPersonData = new String[personArray.length()];
+        parsedPersonData = new FakePerson[personArray.length()];
 
         for (int i = 0; i < personArray.length(); i++) {
             String gender;
@@ -68,9 +92,9 @@ public class PersonJsonUtils {
             String city;
             String state;
             String postcode;
-            String latitude;
-            String longitude;
-            String age;
+            double latitude;
+            double longitude;
+            int age;
             String nat;
             String thumbnail;
 
@@ -84,16 +108,23 @@ public class PersonJsonUtils {
             last = nameObject.getString(PERSON_LAST);
 
             JSONObject locationObject = person.getJSONObject(PERSON_LOCATION);
-            street = locationObject.getString(PERSON_STREET);
+            JSONObject streetObject = locationObject.getJSONObject(PERSON_STREET);
+            street = streetObject.getString(PERSON_NAME)+" "+streetObject.getInt(PERSON_NUMBER);
             city = locationObject.getString(PERSON_CITY);
             state = locationObject.getString(PERSON_STATE);
             postcode = locationObject.getString(PERSON_POSTCODE);
             JSONObject coordinatesObject = locationObject.getJSONObject(PERSON_COORDINATES);
-            latitude = coordinatesObject.getString(PERSON_LATITUDE);
-            longitude = coordinatesObject.getString(PERSON_LONGITUDE);
+            latitude = coordinatesObject.getDouble(PERSON_LATITUDE);
+            longitude = coordinatesObject.getDouble(PERSON_LONGITUDE);
 
+            JSONObject dobObject = person.getJSONObject(PERSON_DOB);
+            age = Integer.valueOf(dobObject.getString(PERSON_AGE));
 
-            parsedPersonData[i] = title + " " + first + " " + last;
+            LatLng latLng = new LatLng(latitude,longitude);
+
+            PersonAddress address = new PersonAddress(street,city,state,postcode,latLng);
+            FakePerson retPerson = new FakePerson(title,first,last,gender,age,address);
+            parsedPersonData[i] = retPerson;
         }
 
         return parsedPersonData;

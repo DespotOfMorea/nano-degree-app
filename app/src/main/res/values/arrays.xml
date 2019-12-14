@@ -1,5 +1,5 @@
 <resources>
-    <!-- Person Details Preference -->
+    <!-- FakePerson Details Preference -->
     <string-array name="details_entries">
         <item>@string/pref_details_entry_1</item>
         <item>@string/pref_details_entry_2</item>

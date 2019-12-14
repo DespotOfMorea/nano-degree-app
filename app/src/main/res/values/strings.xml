@@ -6,6 +6,7 @@
     <string name="details_share">Share Person Details</string>
     <string name="title_activity_settings">Settings</string>
     <string name="action_settings">App Settings</string>
+    <string name="content_authority">org.vnuk.nanodegreeapp</string>
 
     <!-- Messages Preferences -->
     <string name="number_title">Number of persons to display</string>

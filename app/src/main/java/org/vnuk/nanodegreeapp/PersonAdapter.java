@@ -1,7 +1,7 @@
 package org.vnuk.nanodegreeapp;
 
-
 import android.content.Context;
+import android.database.Cursor;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,45 +10,52 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.vnuk.nanodegreeapp.model.FakePerson;
+
 public class PersonAdapter extends RecyclerView.Adapter<PersonAdapter.PersonAdapterViewHolder> {
-    private String[] personsData;
+
+    private final Context mContext;
     private final ItemClickListener itemClickListener;
+    private Cursor mCursor;
 
     public interface ItemClickListener {
-        void onItemClick(String personData);
+        void onItemClick(int personData);
     }
 
-    public PersonAdapter(ItemClickListener itemClickListener) {
+    public PersonAdapter(@NonNull Context context, ItemClickListener itemClickListener) {
+        this.mContext = context;
         this.itemClickListener = itemClickListener;
     }
 
     @NonNull
     @Override
     public PersonAdapterViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
-        Context context = viewGroup.getContext();
+
         int itemsLayoutID = R.layout.person_list_item;
-        LayoutInflater inflater = LayoutInflater.from(context);
+        LayoutInflater inflater = LayoutInflater.from(mContext);
         boolean attachToParent = false;
 
         View view = inflater.inflate(itemsLayoutID, viewGroup, attachToParent);
+        view.setFocusable(true);
 
         return new PersonAdapterViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull PersonAdapterViewHolder holder, int position) {
-        String singlePersonData = personsData[position];
-        holder.tvPersonItemView.setText(singlePersonData);
+        mCursor.moveToPosition(position);
+        FakePerson person = cursor2Person(mCursor);
+        holder.tvPersonItemView.setText(person.simpleDataDisplay());
     }
 
     @Override
     public int getItemCount() {
-        if (null == personsData) return 0;
-        return personsData.length;
+        if (null == mCursor) return 0;
+        return mCursor.getCount();
     }
 
-    public void setPersonsData(String[] personsData) {
-        this.personsData = personsData;
+    void swapCursor (Cursor newCursor) {
+        mCursor = newCursor;
         notifyDataSetChanged();
     }
 
@@ -63,8 +70,20 @@ public class PersonAdapter extends RecyclerView.Adapter<PersonAdapter.PersonAdap
 
         @Override
         public void onClick(View view) {
-            String message = String.valueOf(tvPersonItemView.getText());
-            itemClickListener.onItemClick(message);
+            int adapterPosition = getAdapterPosition();
+
+            mCursor.moveToPosition(adapterPosition);
+            FakePerson person = cursor2Person(mCursor);
+
+            itemClickListener.onItemClick(adapterPosition+1);
         }
+    }
+
+    private FakePerson cursor2Person(Cursor cursor) {
+        String title = cursor.getString(MainActivity.INDEX_PERSON_TITLE);
+        String firstName = cursor.getString(MainActivity.INDEX_PERSON_FIRST_NAME);
+        String lastName = cursor.getString(MainActivity.INDEX_PERSON_LAST_NAME);
+
+        return new FakePerson(title,firstName,lastName);
     }
 }
