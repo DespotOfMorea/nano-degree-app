@@ -1,20 +1,50 @@
 language: android
+# you MUST mention trusty https://docs.travis-ci.com/user/languages/android/
+dist: trusty
+env:
+ global:
+# These parameters should match the parameters for build tools and sdk versions in the gradle file
+ - ANDROID_BUILD_TOOLS=29.0.3 # should match gradle
+ - ADB_INSTALL_TIMEOUT=5 # minutes
+ - ANDROID_API=29 # api is same as gradle file
+ matrix:
+ - EMULATOR_API=21
+ - EMULATOR_API=22
 android:
   components:
     - tools
-    - platform-tools
-    - build-tools-29.0.3
-    - android-29
-    - extra-google-google_play_services
+    - platform-tools-$ANDROID_BUILD_TOOLS
+    - build-tools-$ANDROID_BUILD_TOOLS
+    - android-$ANDROID_API
+    - android-$EMULATOR_API
     - extra-google-m2repository
-    - extra-android-m2repository
+    - extra-android-m2repository # for design library
+    - addon-google_apis-google-19 # google play services
+    - sys-img-armeabi-v7a-addon-google_apis-google-$ANDROID_API
+    - sys-img-armeabi-v7a-addon-google_apis-google-$EMULATOR_API
+    - sys-img-armeabi-v7a-android-$EMULATOR_API
+  licenses:
+    - android-sdk-preview-license-.+
+    - android-sdk-license-.+
+    - google-gdk-license-.+
 jdk:
   - oraclejdk8
+before_cache:
+  - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
 before_install:
- - chmod +x gradlew
- 
- before_script:
-  - echo no | android create avd --force -n test -t android-29 --abi armeabi-v7a
-  - emulator -avd test -no-skin -no-audio -no-window &
-  - android-wait-for-emulator
+    #- yes | sdkmanager "platforms;android-$ANDROID_API"
+before_script:
+  - echo $TRAVIS_BRANCH
+  - echo $TRAVIS_TAG
+  - echo no | android create avd --force -n test -t android-$EMULATOR_API --abi armeabi-v7a
+  - emulator -avd test -no-audio -no-window &
+  - scripts/android-wait-for-emulator.sh
   - adb shell input keyevent 82 &
+script:
+  - ./gradlew cleanAllModules
+  - ./gradlew testAllModulesTravis
+  - if [[ -n $TRAVIS_TAG ]]; then ./gradlew ship; fi
