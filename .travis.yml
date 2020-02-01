@@ -26,3 +26,6 @@ android:
 before_install:
  - yes | sdkmanager "platforms;android-28"
  - chmod +x gradlew
+
+before_script:
+  - android-wait-for-emulator
