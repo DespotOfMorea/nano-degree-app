@@ -27,5 +27,8 @@ android:
   - build-tools-${ANDROID_BUILD_TOOLS}
   - extra
 
+before_install:
+ - chmod +x gradlew
+
 script:
 - ./gradlew clean test build
